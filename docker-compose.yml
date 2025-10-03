@@ -1,32 +1,42 @@
-version: '3.8'
+version: "3.9"
+
 services:
   postgres:
     image: postgres:17
-    container_name: fintrack_postgres
+    container_name: ${PROJECT_NAME}_postgres
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: fintrack
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   minio:
     image: minio/minio:latest
-    container_name: fintrack_minio
-    command: server /data --console-address ":9001"
+    container_name: ${PROJECT_NAME}_minio
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT_INTERNAL}"
+    env_file:
+      - .env
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: admin123
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_API_PORT}:${MINIO_API_PORT_INTERNAL}"
+      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT_INTERNAL}"
     volumes:
       - ./minio_data:/data
+    restart: unless-stopped
 
   metabase:
-    image: metabase/metabase
-    container_name: fintrack_metabase
+    image: metabase/metabase:latest
+    container_name: ${PROJECT_NAME}_metabase
+    env_file:
+      - .env
     ports:
-      - "3000:3000"
+      - "${METABASE_PORT}:${METABASE_PORT_INTERNAL}"
+    restart: unless-stopped
