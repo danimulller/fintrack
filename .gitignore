@@ -1,0 +1,6 @@
+.env
+/minio_data
+/.vscode
+__pycache__
+.ipynb_checkpoints
+/postgres_data
