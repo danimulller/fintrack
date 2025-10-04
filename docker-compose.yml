@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT}:5432"             # 5432 é a porta INTERNA do container
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -39,4 +39,34 @@ services:
       - .env
     ports:
       - "${METABASE_PORT}:${METABASE_PORT_INTERNAL}"
+    restart: unless-stopped
+
+  airflow:
+    image: apache/airflow:2.9.3
+    container_name: ${PROJECT_NAME}_airflow
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: America/Sao_Paulo
+      AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW_FERNET_KEY}"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./minio_data:/opt/airflow/minio_data
+      - ./requirements_airflow.txt:/opt/airflow/requirements.txt
+    ports:
+      - "${AIRFLOW_PORT}:8080"
+    depends_on:
+      - postgres
+      - minio
+    command: >
+      bash -c "
+      if [ -f /opt/airflow/requirements.txt ]; then pip install --no-cache-dir -r /opt/airflow/requirements.txt; fi &&
+      airflow db init &&
+      airflow users create --username ${AIRFLOW_USER} --password ${AIRFLOW_PASSWORD} --role Admin --firstname ${AIRFLOW_FIRSTNAME:-Air} --lastname ${AIRFLOW_LASTNAME:-Flow} --email ${AIRFLOW_EMAIL:-admin@example.com} &&
+      airflow webserver & airflow scheduler
+      "
     restart: unless-stopped
